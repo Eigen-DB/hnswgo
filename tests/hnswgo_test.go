@@ -145,7 +145,7 @@ func TestSearchKNN(t *testing.T) {
 
 	// insert sample vectors
 	for i, v := range vectors {
-		index.InsertVector(v, uint32(i))
+		_ = index.InsertVector(v, uint32(i))
 	}
 
 	k := 5

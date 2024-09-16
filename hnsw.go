@@ -158,8 +158,8 @@ func (i *Index) SearchKNN(vector []float32, k int) ([]uint32, []float32, error) 
 		Normalize(vector)
 	}
 
-	Clabel := make([]C.ulong, k, k)
-	Cdist := make([]C.float, k, k)
+	Clabel := make([]C.ulong, k)
+	Cdist := make([]C.float, k)
 
 	numResult := int(C.searchKNN(i.index, (*C.float)(unsafe.Pointer(&vector[0])), C.int(k), &Clabel[0], &Cdist[0])) // perform the search
 
