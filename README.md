@@ -2,7 +2,7 @@
 
 ### A Go wrapper for [hnswlib](https://github.com/nmslib/hnswlib) 📦 
 
-## Installation
+## Installation 
 
 ```
 go get github.com/Eigen-DB/hnswgo
