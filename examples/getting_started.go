@@ -46,7 +46,7 @@ func main() {
 
 	// insert sample vectors
 	for i, v := range vectors {
-		err = index.InsertVector(v, uint32(i))
+		err = index.InsertVector(v, uint64(i))
 		if err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 		}

@@ -122,6 +122,79 @@ func TestInsertVectorFailure(t *testing.T) {
 	}
 }
 
+func TestGetVectorSuccess(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		_ = index.InsertVector(v, uint64(i))
+	}
+
+	vec, err := index.GetVector(2)
+	if err != nil {
+		t.Fatalf("An error occured when getting a vector: %s", err.Error())
+	}
+	for i := range vec {
+		if vec[i] != vectors[2][i] {
+			t.Fatalf("vector gotten != expected vector. Vector gotten: %v. Expected: %v.", vec, vectors[2])
+		}
+	}
+}
+
+func TestGetVectorNotFound(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		_ = index.InsertVector(v, uint64(i))
+	}
+
+	_, err = index.GetVector(100)
+	if err == nil {
+		t.Fatal("No error occured when getting a non-existant vector")
+	} else {
+		if err.Error() != "Label not found" {
+			t.Fatalf("Another error OTHER than \"Label not found\" occured: %s", err.Error())
+		}
+	}
+}
+
 func TestSearchKNN(t *testing.T) {
 	index, err := setup()
 	if err != nil {
@@ -145,7 +218,7 @@ func TestSearchKNN(t *testing.T) {
 
 	// insert sample vectors
 	for i, v := range vectors {
-		_ = index.InsertVector(v, uint32(i))
+		_ = index.InsertVector(v, uint64(i))
 	}
 
 	k := 5
@@ -158,7 +231,7 @@ func TestSearchKNN(t *testing.T) {
 		return nnLabels[i] < nnLabels[j]
 	})
 
-	assert.Equal(t, []uint32{0, 1, 2, 3, 4}, nnLabels)
+	assert.Equal(t, []uint64{0, 1, 2, 3, 4}, nnLabels)
 
 	t.Logf("%d-nearest neighbors:\n", k)
 	for i := range nnLabels {

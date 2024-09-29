@@ -125,7 +125,7 @@ Adds a vector to the HNSW index.
 
 Returns an error if one occured.
 */
-func (i *Index) InsertVector(vector []float32, label uint32) error {
+func (i *Index) InsertVector(vector []float32, label uint64) error {
 	if len(vector) != i.dimensions {
 		return fmt.Errorf("the vector you are trying to insert is %d-dimensional whereas your index is %d-dimensional", len(vector), i.dimensions)
 	}
@@ -138,6 +138,25 @@ func (i *Index) InsertVector(vector []float32, label uint32) error {
 }
 
 /*
+Returns a vector's components using its label
+
+- label:	the vector's label
+
+Returns the vector's components with specified label
+*/
+func (i *Index) GetVector(label uint64) ([]float32, error) {
+	vec := C.getVector(i.index, C.ulong(label), C.int(i.dimensions))
+	if vec == nil {
+		return nil, getLastError()
+	}
+	defer C.free(unsafe.Pointer(vec))
+	vecSlice := make([]float32, i.dimensions)
+	copy(vecSlice, unsafe.Slice((*float32)(vec), i.dimensions))
+
+	return vecSlice, getLastError()
+}
+
+/*
 Performs similarity search on the HNSW index.
 
 - vector:       the query vector
@@ -146,7 +165,7 @@ Performs similarity search on the HNSW index.
 
 Returns the labels and distances of each of the nearest neighbors, and an error if one occured. Note: the size of both arrays can be < k if k > num of vectors in the index
 */
-func (i *Index) SearchKNN(vector []float32, k int) ([]uint32, []float32, error) {
+func (i *Index) SearchKNN(vector []float32, k int) ([]uint64, []float32, error) {
 	if len(vector) != i.dimensions {
 		return nil, nil, fmt.Errorf("the query vector is %d-dimensional whereas your index is %d-dimensional", len(vector), i.dimensions)
 	}
@@ -167,10 +186,10 @@ func (i *Index) SearchKNN(vector []float32, k int) ([]uint32, []float32, error) 
 		return nil, nil, fmt.Errorf("an error occured with the HNSW algorithm: %s", getLastError())
 	}
 
-	labels := make([]uint32, k)
+	labels := make([]uint64, k)
 	dists := make([]float32, k)
 	for i := 0; i < numResult; i++ {
-		labels[i] = uint32(Clabel[i])
+		labels[i] = uint64(Clabel[i])
 		dists[i] = float32(Cdist[i])
 	}
 
@@ -191,27 +210,3 @@ func (i *Index) SetEfConstruction(efConstruction int) error {
 	C.setEf(i.index, C.int(efConstruction))
 	return getLastError()
 }
-
-//func Load(location string, dim int, spaceType string) *HNSW {
-//	var hnsw HNSW
-//	hnsw.dim = dim
-//	hnsw.spaceType = spaceType
-//
-//	pLocation := C.CString(location)
-//	if spaceType == "ip" {
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
-//	} else if spaceType == "cosine" {
-//		hnsw.normalize = true
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
-//	} else {
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('l'))
-//	}
-//	C.free(unsafe.Pointer(pLocation))
-//	return &hnsw
-//}
-//
-//func (h *HNSW) Save(location string) {
-//	pLocation := C.CString(location)
-//	C.saveHNSW(h.index, pLocation)
-//	C.free(unsafe.Pointer(pLocation))
-//}
