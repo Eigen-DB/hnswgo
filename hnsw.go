@@ -157,6 +157,18 @@ func (i *Index) GetVector(label uint64) ([]float32, error) {
 }
 
 /*
+Marks a vector with the specified label as deleted, which omits it from KNN search.
+
+- label: 	the vector's label
+
+Returns an error if one occured.
+*/
+func (i *Index) DeleteVector(label uint64) error {
+	C.deleteVector(i.index, C.ulong(label))
+	return getLastError()
+}
+
+/*
 Performs similarity search on the HNSW index.
 
 - vector:       the query vector

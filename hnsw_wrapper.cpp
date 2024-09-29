@@ -47,7 +47,7 @@ HNSW initHNSW(int dim, unsigned long int maxElements, int m, int efConstruction,
         } else { // default: L2
             vectorSpace = new hnswlib::L2Space(dim);
         }
-        return new hnswlib::HierarchicalNSW<float>(vectorSpace, maxElements, m, efConstruction, randSeed); // instantiate the hnsw index
+        return new hnswlib::HierarchicalNSW<float>(vectorSpace, maxElements, m, efConstruction, randSeed, true); // instantiate the hnsw index
     } catch (const std::runtime_error e) {
         lastErrorMsg = std::string(e.what());
         return nullptr;
@@ -67,16 +67,15 @@ void freeHNSW(HNSW hnswIndex) {
 }
 
 /**
- * Adds a vector to the HNSW index.
+ * Adds a vector to the HNSW index. If a vector with the specified label already exists, it will be overwritten.
  *
  * @param hnswIndex:    HNSW index to add the point to
  * @param vector:       the vector to add to the index
  * @param label:        the vector's label
  */
 void insertVector(HNSW hnswIndex, float *vector, label_t label) {
-    // ** I believe a vector is overwritten when you insert another vector with the same label **
     try {
-        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->addPoint(vector, label);
+        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->addPoint(vector, label, true);
     } catch(const std::runtime_error e) {
         lastErrorMsg = std::string(e.what());
     } catch (const std::exception e) {
@@ -104,6 +103,22 @@ float* getVector(HNSW hnswIndex, label_t label, int dim) {
     } catch (const std::exception e) {
         lastErrorMsg = std::string(e.what());
         return nullptr;
+    }
+}
+
+/**
+ * Marks a vector with the specified label as deleted, which omits it from KNN search.
+ * 
+ * @param hnswIndex:    the HNSW index
+ * @param label:        the vector's label
+ */
+void deleteVector(HNSW hnswIndex, label_t label) {
+    try {
+        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->markDelete(label);
+    } catch(const std::runtime_error e) {
+        lastErrorMsg = std::string(e.what());
+    } catch (const std::exception e) {
+        lastErrorMsg = std::string(e.what());
     }
 }
 
