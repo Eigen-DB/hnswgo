@@ -1,5 +1,6 @@
 #include "lib/hnswlib/hnswlib.h"
 #include "hnsw_wrapper.h"
+#include <stdlib.h>
 
 static thread_local std::string lastErrorMsg; // stores the last error message
 
@@ -46,7 +47,7 @@ HNSW initHNSW(int dim, unsigned long int maxElements, int m, int efConstruction,
         } else { // default: L2
             vectorSpace = new hnswlib::L2Space(dim);
         }
-        return new hnswlib::HierarchicalNSW<float>(vectorSpace, maxElements, m, efConstruction, randSeed); // instantiate the hnsw index
+        return new hnswlib::HierarchicalNSW<float>(vectorSpace, maxElements, m, efConstruction, randSeed, true); // instantiate the hnsw index
     } catch (const std::runtime_error e) {
         lastErrorMsg = std::string(e.what());
         return nullptr;
@@ -66,16 +67,54 @@ void freeHNSW(HNSW hnswIndex) {
 }
 
 /**
- * Adds a vector to the HNSW index.
+ * Adds a vector to the HNSW index. If a vector with the specified label already exists, it will be overwritten.
  *
  * @param hnswIndex:    HNSW index to add the point to
  * @param vector:       the vector to add to the index
  * @param label:        the vector's label
  */
-void insertVector(HNSW hnswIndex, float *vector, unsigned long int label) {
-    // ** I believe a vector is overwritten when you insert another vector with the same label **
+void insertVector(HNSW hnswIndex, float *vector, label_t label) {
     try {
-        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->addPoint(vector, label);
+        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->addPoint(vector, label, true);
+    } catch(const std::runtime_error e) {
+        lastErrorMsg = std::string(e.what());
+    } catch (const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+    }
+}
+
+/**
+ * Returns a vector's components given its label.
+ * 
+ * @param hnswIndex:    the HNSW index
+ * @param label:        the vector's label
+ * 
+ * @return              the vector's components
+ */
+float* getVector(HNSW hnswIndex, label_t label, int dim) {
+    try {
+        std::vector<float> vec = ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->getDataByLabel<float>(label);
+        float* vecPtr = (float*) malloc(sizeof(float) * dim);
+        memcpy(vecPtr, vec.data(), sizeof(float) * dim);
+        return vecPtr;
+    } catch(const std::runtime_error e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    } catch (const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    }
+}
+
+/**
+ * Marks a vector with the specified label as deleted, which omits it from KNN search.
+ * 
+ * @param hnswIndex:    the HNSW index
+ * @param label:        the vector's label
+ */
+void deleteVector(HNSW hnswIndex, label_t label) {
+    try {
+        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->markDelete(label);
     } catch(const std::runtime_error e) {
         lastErrorMsg = std::string(e.what());
     } catch (const std::exception e) {
@@ -94,10 +133,10 @@ void insertVector(HNSW hnswIndex, float *vector, unsigned long int label) {
  * 
  * @return              the number of nearest neighbors found (num of nn <= k since it's possible for k > num of vectors in the index). If an error occured, it will return -1.
  */
-int searchKNN(HNSW hnswIndex, float *vector, int k, unsigned long int *labels, float *distances) {
+int searchKNN(HNSW hnswIndex, float *vector, int k, label_t *labels, float *distances) {
     std::priority_queue<std::pair<float, hnswlib::labeltype>> searchResults;
     try {
-        searchResults = ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->searchKnn(vector, k);
+        searchResults = ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->searchKnn(vector, k); // use searchKnnCloserFirst to ensure the output is sorted
 
         int n = searchResults.size();
         std::pair<float, hnswlib::labeltype> pair;
@@ -126,24 +165,3 @@ int searchKNN(HNSW hnswIndex, float *vector, int k, unsigned long int *labels, f
 void setEf(HNSW hnswIndex, int ef) {
     ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->ef_ = ef;
 }
-
-
-
-
-
-
-//HNSW loadHNSW(char *location, int dim, char stype) {
-//  SpaceInterface<float> *space;
-//  if (stype == 'i') {
-//    space = new InnerProductSpace(dim);
-//  } else {
-//    space = new L2Space(dim);
-//  }
-//  HierarchicalNSW<float> *appr_alg = new HierarchicalNSW<float>(space, string(location), false, 0);
-//  return (void*)appr_alg;
-//}
-//
-//HNSW saveHNSW(HNSW index, char *location) {
-//  ((HierarchicalNSW<float>*)index)->saveIndex(location);
-//  return ((HierarchicalNSW<float>*)index);
-//}

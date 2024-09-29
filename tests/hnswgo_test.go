@@ -102,8 +102,7 @@ func TestInsertVectorSuccess(t *testing.T) {
 	defer index.Free()
 
 	vector := []float32{1.2, -4.2}
-	err = index.InsertVector(vector, 1)
-	if err != nil {
+	if err := index.InsertVector(vector, 1); err != nil {
 		t.Fatalf("An error occured when inserting a vector: %s", err.Error())
 	}
 }
@@ -116,10 +115,245 @@ func TestInsertVectorFailure(t *testing.T) {
 	defer index.Free()
 
 	vector := []float32{1.2, -4.2, 3.3} // trying to insert 3-dimensional vector in 2-dimensional index -> error
-	err = index.InsertVector(vector, 1)
-	if err == nil {
+	if err := index.InsertVector(vector, 1); err == nil {
 		t.Fatal("An error SHOULD HAVE occured when inserting a 3D vector in a 2D index")
 	}
+}
+
+func TestInsertVectorOverwrite(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	if err := index.InsertVector([]float32{1.2, -4.2}, 1); err != nil {
+		t.Fatalf("An error occured when inserting a vector: %s", err.Error())
+	}
+
+	if err := index.InsertVector([]float32{4.2, 6.2}, 1); err != nil {
+		t.Fatalf("An error occured when overwritting vector: %s", err.Error())
+	}
+}
+
+func TestGetVectorSuccess(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	vec, err := index.GetVector(2)
+	if err != nil {
+		t.Fatalf("An error occured when getting a vector: %s", err.Error())
+	}
+
+	assert.Equal(t, vec, vectors[2], fmt.Sprintf("vector gotten != expected vector. Vector gotten: %v. Expected: %v.", vec, vectors[2]))
+}
+
+func TestGetVectorNotFound(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	_, err = index.GetVector(100)
+	if err == nil {
+		t.Fatal("No error occured when getting a non-existant vector")
+	} else {
+		if err.Error() != "Label not found" {
+			t.Fatalf("Another error OTHER than \"Label not found\" occured: %s", err.Error())
+		}
+	}
+}
+
+func TestDeleteVectorSuccessful(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	if err := index.DeleteVector(2); err != nil {
+		t.Fatalf("An error occured when trying to delete a vector: %s", err.Error())
+	}
+
+	if _, err = index.GetVector(2); err != nil {
+		if err.Error() != "Label not found" {
+			t.Fatalf("An error OTHER than \"Label not found\" occured when trying to get a vector AFTER it's been deleted")
+		}
+	} else {
+		t.Fatalf("No error occured when trying to get a vector AFTER it's been deleted")
+	}
+
+	if err := index.InsertVector(vectors[2], uint64(2)); err != nil {
+		t.Fatalf("An error occured when trying to re-insert the same vector with the same label after deletion: %s", err.Error())
+	}
+
+	v, err := index.GetVector(2)
+	if err != nil {
+		t.Fatalf("An error occured when trying to get a vector after it's been re-instered: %s", err.Error())
+	}
+
+	assert.Equal(t, v, vectors[2], fmt.Sprintf("The vector you re-inserted is not the same as the actual vector. Vector re-inserted: %v. Expected: %v.", v, vectors[2]))
+}
+
+func TestDeleteVectorUnsuccessful(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	if err := index.DeleteVector(100); err == nil {
+		t.Fatal("No error occured when trying to delete a non-existant vector")
+	} else {
+		if err.Error() != "Label not found" {
+			t.Fatalf("An error other than \"Label not found\" occured when trying to delete a non-existant vector")
+		}
+	}
+}
+
+func TestDeleteVectorKNNAfterReinsertion(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	if err := index.DeleteVector(2); err != nil {
+		t.Fatalf("An error occured when trying to delete a vector: %s", err.Error())
+	}
+
+	if _, err = index.GetVector(2); err != nil {
+		if err.Error() != "Label not found" {
+			t.Fatalf("An error OTHER than \"Label not found\" occured when trying to get a vector AFTER it's been deleted")
+		}
+	} else {
+		t.Fatalf("No error occured when trying to get a vector AFTER it's been deleted")
+	}
+
+	if err := index.InsertVector(vectors[2], uint64(2)); err != nil {
+		t.Fatalf("An error occured when trying to re-insert the same vector with the same label after deletion: %s", err.Error())
+	}
+
+	k := 5
+	nnLabels, _, err := index.SearchKNN(vectors[0], k)
+	if err != nil {
+		t.Fatalf("Error when performing similarity search: %s", err.Error())
+	}
+
+	sort.Slice(nnLabels, func(i, j int) bool {
+		return nnLabels[i] < nnLabels[j]
+	})
+
+	assert.Equal(t, []uint64{0, 1, 2, 3, 4}, nnLabels)
 }
 
 func TestSearchKNN(t *testing.T) {
@@ -145,7 +379,9 @@ func TestSearchKNN(t *testing.T) {
 
 	// insert sample vectors
 	for i, v := range vectors {
-		_ = index.InsertVector(v, uint32(i))
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
 	}
 
 	k := 5
@@ -158,7 +394,7 @@ func TestSearchKNN(t *testing.T) {
 		return nnLabels[i] < nnLabels[j]
 	})
 
-	assert.Equal(t, []uint32{0, 1, 2, 3, 4}, nnLabels)
+	assert.Equal(t, []uint64{0, 1, 2, 3, 4}, nnLabels)
 
 	t.Logf("%d-nearest neighbors:\n", k)
 	for i := range nnLabels {
