@@ -36,7 +36,7 @@ char* getLastErrorMsg() {
  * 
  * @return                  instance of a HNSW index
  */
-HNSW initHNSW(int dim, unsigned long int maxElements, int m, int efConstruction, int randSeed, char spaceType) {
+HNSW initHNSW(int dim, unsigned long maxElements, int m, int efConstruction, int randSeed, char spaceType) {
     try {
         hnswlib::SpaceInterface<float> *vectorSpace;
         if (spaceType == 'i') { // inner product
@@ -164,4 +164,33 @@ int searchKNN(HNSW hnswIndex, float *vector, int k, label_t *labels, float *dist
  */
 void setEf(HNSW hnswIndex, int ef) {
     ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->ef_ = ef;
+}
+
+HNSW loadSavedIndex(char *location, int dim, char spaceType, unsigned long maxElements) {
+  try {
+        hnswlib::SpaceInterface<float> *vectorSpace;
+        if (spaceType == 'i') { // inner product
+            vectorSpace = new hnswlib::InnerProductSpace(dim);
+        }
+        else if (spaceType == 'c') { // cosine (cosine is the same as IP when all vectors are normalized)
+            vectorSpace = new hnswlib::InnerProductSpace(dim);
+        } else { // default: L2
+            vectorSpace = new hnswlib::L2Space(dim);
+        }
+        return new hnswlib::HierarchicalNSW<float>(vectorSpace, std::string(location), false, maxElements); // load the index from the specified location
+    } catch (const std::runtime_error e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    } catch(const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    }
+}
+
+void saveIndex(HNSW index, char *location) {
+    try {
+        ((hnswlib::HierarchicalNSW<float>*) index)->saveIndex(location);
+    } catch (const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+    }
 }

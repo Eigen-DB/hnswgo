@@ -222,3 +222,27 @@ func (i *Index) SetEfConstruction(efConstruction int) error {
 	C.setEf(i.index, C.int(efConstruction))
 	return getLastError()
 }
+
+//func Load(location string, dim int, spaceType string) *HNSW {
+//	var hnsw HNSW
+//	hnsw.dim = dim
+//	hnsw.spaceType = spaceType
+//
+//	pLocation := C.CString(location)
+//	if spaceType == "ip" {
+//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
+//	} else if spaceType == "cosine" {
+//		hnsw.normalize = true
+//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
+//	} else {
+//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('l'))
+//	}
+//	C.free(unsafe.Pointer(pLocation))
+//	return &hnsw
+//}
+//
+//func (h *HNSW) Save(location string) {
+//	pLocation := C.CString(location)
+//	C.saveHNSW(h.index, pLocation)
+//	C.free(unsafe.Pointer(pLocation))
+//}

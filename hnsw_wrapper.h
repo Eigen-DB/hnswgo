@@ -12,8 +12,8 @@ extern "C" {
     void deleteVector(HNSW hnswIndex, label_t label);
     int searchKNN(HNSW hnswIndex, float *vector, int k, label_t *labels, float *distances);
     void setEf(HNSW hnswIndex, int ef);
-    //HNSW loadHNSW(char *location, int dim, char stype);
-    //HNSW saveHNSW(HNSW index, char *location);
+    HNSW loadSavedIndex(char *location, int dim, char spaceType, unsigned long maxElements);
+    void saveIndex(HNSW index, char *location);
 #ifdef __cplusplus
 }
 #endif
