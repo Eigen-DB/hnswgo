@@ -58,6 +58,51 @@ HNSW initHNSW(int dim, unsigned long maxElements, int m, int efConstruction, int
 }
 
 /**
+ * Generate an index using an index that has been saved on disk.
+ * 
+ * @param location:     the file path of the saved index
+ * @param dim:          dimension of the vector space
+ * @param spaceType:    similarity metric to use in the index ("l" = L2, "i" = IP, "c" = cosine). (default: "l")
+ * @param maxElements:  index's vector storage capacity
+ * 
+ * @return              an index containing the data previously saved on disk
+ */
+HNSW loadHNSW(char *location, int dim, char spaceType, unsigned long maxElements) {
+    try {
+        hnswlib::SpaceInterface<float> *vectorSpace;
+        if (spaceType == 'i') { // inner product
+            vectorSpace = new hnswlib::InnerProductSpace(dim);
+        }
+        else if (spaceType == 'c') { // cosine (cosine is the same as IP when all vectors are normalized)
+            vectorSpace = new hnswlib::InnerProductSpace(dim);
+        } else { // default: L2
+            vectorSpace = new hnswlib::L2Space(dim);
+        }
+        return new hnswlib::HierarchicalNSW<float>(vectorSpace, std::string(location), false, maxElements); // load the index from the specified location
+    } catch (const std::runtime_error e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    } catch(const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+        return nullptr;
+    }
+}
+
+/**
+ * Saves an index as a file on the disk.
+ * 
+ * @param hnswIndex:    the HNSW index
+ * @param location:     the location in which to save the index
+ */
+void saveHNSW(HNSW hnswIndex, char *location) {
+    try {
+        ((hnswlib::HierarchicalNSW<float>*) index)->saveIndex(location);
+    } catch (const std::exception e) {
+        lastErrorMsg = std::string(e.what());
+    }
+}
+
+/**
  * Frees an HNSW index from memory.
  *
  * @param hnswIndex: HNSW index to free
@@ -164,33 +209,4 @@ int searchKNN(HNSW hnswIndex, float *vector, int k, label_t *labels, float *dist
  */
 void setEf(HNSW hnswIndex, int ef) {
     ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->ef_ = ef;
-}
-
-HNSW loadSavedIndex(char *location, int dim, char spaceType, unsigned long maxElements) {
-  try {
-        hnswlib::SpaceInterface<float> *vectorSpace;
-        if (spaceType == 'i') { // inner product
-            vectorSpace = new hnswlib::InnerProductSpace(dim);
-        }
-        else if (spaceType == 'c') { // cosine (cosine is the same as IP when all vectors are normalized)
-            vectorSpace = new hnswlib::InnerProductSpace(dim);
-        } else { // default: L2
-            vectorSpace = new hnswlib::L2Space(dim);
-        }
-        return new hnswlib::HierarchicalNSW<float>(vectorSpace, std::string(location), false, maxElements); // load the index from the specified location
-    } catch (const std::runtime_error e) {
-        lastErrorMsg = std::string(e.what());
-        return nullptr;
-    } catch(const std::exception e) {
-        lastErrorMsg = std::string(e.what());
-        return nullptr;
-    }
-}
-
-void saveIndex(HNSW index, char *location) {
-    try {
-        ((hnswlib::HierarchicalNSW<float>*) index)->saveIndex(location);
-    } catch (const std::exception e) {
-        lastErrorMsg = std::string(e.what());
-    }
 }

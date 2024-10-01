@@ -109,6 +109,44 @@ func New(dim int, m int, efConstruction int, randSeed int, maxElements uint32, s
 	return index, getLastError()
 }
 
+func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (*Index, error) {
+	if dim < 1 {
+		return nil, errors.New("dimension must be >= 1")
+	}
+	if maxElements < 1 {
+		return nil, errors.New("max elements must be >= 1")
+	}
+
+	index := new(Index)
+	index.dimensions = dim
+	index.spaceType = spaceType
+	index.size = maxElements
+
+	cLocation := C.CString(location)
+	defer C.free(unsafe.Pointer(cLocation))
+
+	if spaceType == "ip" {
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('i'), C.ulong(maxElements))
+	} else if spaceType == "cosine" {
+		index.normalize = true
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('c'), C.ulong(maxElements))
+	} else {
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('l'), C.ulong(maxElements))
+	}
+
+	if index.index == nil {
+		return nil, getLastError()
+	}
+
+	return index, getLastError()
+}
+
+func (i *Index) SaveToDisk(location string) {
+	cLocation := C.CString(location)
+	defer C.free(unsafe.Pointer(cLocation))
+	C.saveHNSW(i.index, cLocation)
+}
+
 /*
 Frees the HNSW index from memory.
 */
@@ -222,27 +260,3 @@ func (i *Index) SetEfConstruction(efConstruction int) error {
 	C.setEf(i.index, C.int(efConstruction))
 	return getLastError()
 }
-
-//func Load(location string, dim int, spaceType string) *HNSW {
-//	var hnsw HNSW
-//	hnsw.dim = dim
-//	hnsw.spaceType = spaceType
-//
-//	pLocation := C.CString(location)
-//	if spaceType == "ip" {
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
-//	} else if spaceType == "cosine" {
-//		hnsw.normalize = true
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('i'))
-//	} else {
-//		hnsw.index = C.loadHNSW(pLocation, C.int(dim), C.char('l'))
-//	}
-//	C.free(unsafe.Pointer(pLocation))
-//	return &hnsw
-//}
-//
-//func (h *HNSW) Save(location string) {
-//	pLocation := C.CString(location)
-//	C.saveHNSW(h.index, pLocation)
-//	C.free(unsafe.Pointer(pLocation))
-//}
