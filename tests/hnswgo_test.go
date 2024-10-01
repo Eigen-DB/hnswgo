@@ -560,7 +560,7 @@ func TestSaveToDiskInvalidPerms(t *testing.T) {
 		}
 	}
 
-	if err := index.SaveToDisk("/tmp/perm_test/index.bin"); err == nil {
+	if err := index.SaveToDisk("/root/index.bin"); err == nil {
 		t.Fatal("No error occured when setting the location to a path with elevated permissions")
 	} else if !os.IsPermission(err) {
 		t.Fatalf("Unexpected error received: %s", err.Error())
