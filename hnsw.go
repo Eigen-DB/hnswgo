@@ -70,7 +70,7 @@ Returns a reference to an instance of an HNSW index.
 
 - randSeed:       	random seed
 
-- spaceType:      	similarity metric to use in the index
+- spaceType:      	similarity metric to use in the index ("ip", "cosine", "l2". default: "l2")
 
 Returns an instance of an HNSW index, or an error if there was a problem initializing the index.
 */
@@ -107,6 +107,68 @@ func New(dim int, m int, efConstruction int, randSeed int, maxElements uint32, s
 	}
 
 	return index, getLastError()
+}
+
+/*
+Loads a saved index and returns a reference to it.
+
+- location:			the file path of the saved index
+
+- dim:            	dimension of the vector space
+
+- spaceType:      	similarity metric to use in the index ("ip", "cosine", "l2". default: "l2")
+
+- maxElements:    	index's vector storage capacity
+
+Returns an instance of the saved HNSW index, or an error if there was a problem.
+*/
+func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (*Index, error) {
+	if dim < 1 {
+		return nil, errors.New("dimension must be >= 1")
+	}
+	if maxElements < 1 {
+		return nil, errors.New("max elements must be >= 1")
+	}
+
+	index := new(Index)
+	index.dimensions = dim
+	index.spaceType = spaceType
+	index.size = maxElements
+
+	cLocation := C.CString(location)
+	defer C.free(unsafe.Pointer(cLocation))
+
+	if spaceType == "ip" {
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('i'), C.ulong(maxElements))
+	} else if spaceType == "cosine" {
+		index.normalize = true
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('c'), C.ulong(maxElements))
+	} else {
+		index.index = C.loadHNSW(cLocation, C.int(dim), C.char('l'), C.ulong(maxElements))
+	}
+
+	if index.index == nil {
+		return nil, getLastError()
+	}
+
+	return index, getLastError()
+}
+
+/*
+Saves the index to the disk.
+
+- location:			the file path in which to save the index
+
+Returns an error if there was a problem.
+*/
+func (i *Index) SaveToDisk(location string) error {
+	if location == "" {
+		return errors.New("location cannot be blank")
+	}
+	cLocation := C.CString(location)
+	defer C.free(unsafe.Pointer(cLocation))
+	C.saveHNSW(i.index, cLocation)
+	return getLastError()
 }
 
 /*

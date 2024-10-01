@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -425,5 +426,146 @@ func TestSetEfConstructionFailure(t *testing.T) {
 	err = index.SetEfConstruction(-1)
 	if err == nil {
 		t.Fatal("An error SHOULD HAVE occured when updating efConstruction.")
+	}
+}
+
+func TestSaveToDiskSuccess(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	if err := index.SaveToDisk("/tmp/saved_data.bin"); err != nil {
+		t.Fatalf("An error occured when saving index to disk: %s", err.Error())
+	}
+}
+
+func TestSaveToDiskEmptyPath(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	// sample vectors
+	vectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	// insert sample vectors
+	for i, v := range vectors {
+		if err := index.InsertVector(v, uint64(i)); err != nil {
+			t.Fatalf("An error occured when inserting vector %v: %s", v, err.Error())
+		}
+	}
+
+	if err := index.SaveToDisk(""); err == nil {
+		t.Fatal("No error occured when setting the location to \"\"")
+	} else if err.Error() != "location cannot be blank" {
+		t.Fatalf("Unexpected error received: %s", err.Error())
+	}
+}
+
+func TestLoadIndexSuccess(t *testing.T) {
+	index, err := hnswgo.LoadIndex("/tmp/saved_data.bin", 2, "l2", uint32(10000)) // same as whats in setup()
+	if err != nil {
+		t.Fatalf("An error occured when loading an index from disk: %s", err.Error())
+	}
+	defer index.Free()
+
+	expectedVectors := [][]float32{
+		{1.2, 3.4},
+		{2.1, 4.5},
+		{0.5, 1.7},
+		{3.3, 2.2},
+		{4.8, 5.6},
+		{7.1, 8.2},
+		{9.0, 0.4},
+		{6.3, 3.5},
+		{2.9, 7.8},
+		{5.0, 1.1},
+	}
+
+	for i := 0; i < 10; i++ {
+		v, err := index.GetVector(uint64(i))
+		if err != nil {
+			t.Fatalf("An error occured when getting a vector from the index loaded from disk: %s", err.Error())
+		}
+		assert.Equal(t, expectedVectors[i], v, fmt.Sprintf("The vector fetched from loaded index != vector inserted before saving on disk. Expected: %v. Got: %v.", expectedVectors[i], v))
+
+		t.Logf("%v\n", v)
+	}
+
+	// cleanup
+	if err := os.Remove("/tmp/saved_data.bin"); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestLoadIndexInvalidPath(t *testing.T) {
+	index, err := hnswgo.LoadIndex("/fake/path", 2, "l2", uint32(10000))
+	if index != nil {
+		defer index.Free()
+	}
+	if err == nil {
+		t.Fatal("No error occured when trying to load an index with a fake location.")
+	} else if err.Error() != "Cannot open file" {
+		t.Fatalf("Unexpected error received: %s", err.Error())
+	}
+}
+
+func TestLoadIndexInvalidData(t *testing.T) {
+	f, err := os.Create("/tmp/hnswgo_test.txt")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if _, err := f.Write([]byte("hello world")); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	index, err := hnswgo.LoadIndex("/tmp/hnswgo_test.txt", 2, "l2", uint32(10000))
+	if index != nil {
+		defer index.Free()
+	}
+	if err == nil {
+		t.Fatal("No error occured when trying to load an index using invalid data.")
+	} else if err.Error() != "Index seems to be corrupted or unsupported" {
+		t.Fatalf("Unexpected error received: %s", err.Error())
+	}
+
+	// cleanup
+	if err := os.Remove("/tmp/hnswgo_test.txt"); err != nil {
+		t.Fatal(err.Error())
 	}
 }
