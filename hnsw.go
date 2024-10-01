@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"unsafe"
 )
 
@@ -130,6 +131,11 @@ func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (
 		return nil, errors.New("max elements must be >= 1")
 	}
 
+	// checking the location's validity and permissions
+	if _, err := os.ReadFile(location); err != nil {
+		return nil, err
+	}
+
 	index := new(Index)
 	index.dimensions = dim
 	index.spaceType = spaceType
@@ -165,6 +171,19 @@ func (i *Index) SaveToDisk(location string) error {
 	if location == "" {
 		return errors.New("location cannot be blank")
 	}
+
+	// checking the location's validity and permissions
+	if _, err := os.Stat(location); os.IsNotExist(err) { // file does not exist yet
+		if _, err := os.Create(location); err != nil {
+			return err
+		}
+		if err := os.Remove(location); err != nil {
+			return err
+		}
+	} else if os.IsPermission(err) {
+		return err
+	}
+
 	cLocation := C.CString(location)
 	defer C.free(unsafe.Pointer(cLocation))
 	C.saveHNSW(i.index, cLocation)
