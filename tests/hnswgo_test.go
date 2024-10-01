@@ -615,6 +615,18 @@ func TestLoadIndexInvalidPath(t *testing.T) {
 	}
 }
 
+func TestLoadIndexEmptyPath(t *testing.T) {
+	index, err := hnswgo.LoadIndex("", 2, "l2", uint32(10000))
+	if index != nil {
+		defer index.Free()
+	}
+	if err == nil {
+		t.Fatal("No error occured when trying to load an index with a fake location.")
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("Unexpected error received: %s", err.Error())
+	}
+}
+
 func TestLoadIndexInvalidPerms(t *testing.T) {
 	index, err := hnswgo.LoadIndex("/root/index.bin", 2, "l2", uint32(10000))
 	if index != nil {
