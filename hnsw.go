@@ -141,10 +141,14 @@ func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (
 	return index, getLastError()
 }
 
-func (i *Index) SaveToDisk(location string) {
+func (i *Index) SaveToDisk(location string) error {
+	if location == "" {
+		return errors.New("location cannot be blank")
+	}
 	cLocation := C.CString(location)
 	defer C.free(unsafe.Pointer(cLocation))
 	C.saveHNSW(i.index, cLocation)
+	return getLastError()
 }
 
 /*

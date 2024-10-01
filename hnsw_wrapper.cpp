@@ -96,7 +96,7 @@ HNSW loadHNSW(char *location, int dim, char spaceType, unsigned long maxElements
  */
 void saveHNSW(HNSW hnswIndex, char *location) {
     try {
-        ((hnswlib::HierarchicalNSW<float>*) index)->saveIndex(location);
+        ((hnswlib::HierarchicalNSW<float>*) hnswIndex)->saveIndex(location);
     } catch (const std::exception e) {
         lastErrorMsg = std::string(e.what());
     }
