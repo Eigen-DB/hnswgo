@@ -70,7 +70,7 @@ Returns a reference to an instance of an HNSW index.
 
 - randSeed:       	random seed
 
-- spaceType:      	similarity metric to use in the index
+- spaceType:      	similarity metric to use in the index ("ip", "cosine", "l2". default: "l2")
 
 Returns an instance of an HNSW index, or an error if there was a problem initializing the index.
 */
@@ -109,6 +109,19 @@ func New(dim int, m int, efConstruction int, randSeed int, maxElements uint32, s
 	return index, getLastError()
 }
 
+/*
+Loads a saved index and returns a reference to it.
+
+- location:			the file path of the saved index
+
+- dim:            	dimension of the vector space
+
+- spaceType:      	similarity metric to use in the index ("ip", "cosine", "l2". default: "l2")
+
+- maxElements:    	index's vector storage capacity
+
+Returns an instance of the saved HNSW index, or an error if there was a problem.
+*/
 func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (*Index, error) {
 	if dim < 1 {
 		return nil, errors.New("dimension must be >= 1")
@@ -141,6 +154,13 @@ func LoadIndex(location string, dim int, spaceType string, maxElements uint32) (
 	return index, getLastError()
 }
 
+/*
+Saves the index to the disk.
+
+- location:			the file path in which to save the index
+
+Returns an error if there was a problem.
+*/
 func (i *Index) SaveToDisk(location string) error {
 	if location == "" {
 		return errors.New("location cannot be blank")
