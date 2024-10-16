@@ -5,7 +5,7 @@
 ## Installation 
 
 ```
-go get github.com/Eigen-DB/hnswgo
+go get github.com/Eigen-DB/hnswgo/v2
 ```
 
 ## Usage
