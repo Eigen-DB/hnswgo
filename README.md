@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Eigen-DB/hnswgo"
+	"github.com/Eigen-DB/hnswgo/v2"
 )
 
 func main() {
