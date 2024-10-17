@@ -199,6 +199,7 @@ func (i *Index) Free() {
 
 /*
 Adds a vector to the HNSW index.
+If the a vector with the same label already exists, the function returns an error
 
 - vector:       the vector to add to the index
 
@@ -211,10 +212,35 @@ func (i *Index) InsertVector(vector []float32, label uint64) error {
 		return fmt.Errorf("the vector you are trying to insert is %d-dimensional whereas your index is %d-dimensional", len(vector), i.dimensions)
 	}
 
+	_, err := i.GetVector(label)
+	if err == nil {
+		return fmt.Errorf("a vector with label %d already exists in the index", label)
+	}
+
 	if i.normalize {
 		Normalize(vector)
 	}
 	C.insertVector(i.index, (*C.float)(unsafe.Pointer(&vector[0])), C.ulong(label))
+	return getLastError()
+}
+
+/*
+Replaces an existing vector in the HNSW index.
+
+- label:        the vector's label
+
+- newVector:    the new vector used to replace the old vector
+
+Returns an error if one occured.
+*/
+func (i *Index) ReplaceVector(label uint64, newVector []float32) error {
+	if len(newVector) != i.dimensions {
+		return fmt.Errorf("the vector you are trying to insert is %d-dimensional whereas your index is %d-dimensional", len(newVector), i.dimensions)
+	}
+	if i.normalize {
+		Normalize(newVector)
+	}
+	C.insertVector(i.index, (*C.float)(unsafe.Pointer(&newVector[0])), C.ulong(label))
 	return getLastError()
 }
 

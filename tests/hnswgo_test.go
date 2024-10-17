@@ -132,8 +132,56 @@ func TestInsertVectorOverwrite(t *testing.T) {
 		t.Fatalf("An error occured when inserting a vector: %s", err.Error())
 	}
 
-	if err := index.InsertVector([]float32{4.2, 6.2}, 1); err != nil {
-		t.Fatalf("An error occured when overwritting vector: %s", err.Error())
+	if err := index.InsertVector([]float32{4.2, 6.2}, 1); err == nil {
+		t.Fatalf("No error occured when attempting to overwrite a vector")
+	} else if err.Error() != "a vector with label 1 already exists in the index" {
+		t.Fatalf("Got the wrong error when trying to overwrite a vector: %s", err.Error())
+	}
+}
+
+func TestReplaceVectorSuccess(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	if err := index.InsertVector([]float32{1.2, -4.2}, 1); err != nil {
+		t.Fatalf("An error occured when inserting a vector: %s", err.Error())
+	}
+
+	if err := index.ReplaceVector(1, []float32{4.2, 6.2}); err != nil {
+		t.Fatalf("An error occured when trying to replace a vector: %s", err.Error())
+	}
+}
+
+func TestReplaceVectorFirstInsert(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	if err := index.ReplaceVector(1, []float32{4.2, 6.2}); err != nil {
+		t.Fatalf("An error occured when trying to replace a non-existant vector: %s", err.Error())
+	}
+}
+
+func TestReplaceVectorInvalidDims(t *testing.T) {
+	index, err := setup()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer index.Free()
+
+	if err := index.InsertVector([]float32{1.2, -4.2}, 1); err != nil {
+		t.Fatalf("An error occured when inserting a vector: %s", err.Error())
+	}
+
+	if err := index.ReplaceVector(1, []float32{4.2, 6.2, 3.3}); err == nil {
+		t.Fatalf("No error occured when trying to replace a vector with invalid dimensions")
+	} else if err.Error() != "the vector you are trying to insert is 3-dimensional whereas your index is 2-dimensional" {
+		t.Fatalf("Got the wrong error when trying to overwrite a vector with invalid dimensions: %s", err.Error())
 	}
 }
 

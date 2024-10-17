@@ -78,7 +78,7 @@ HNSW loadHNSW(char *location, int dim, char spaceType, unsigned long maxElements
         } else { // default: L2
             vectorSpace = new hnswlib::L2Space(dim);
         }
-        return new hnswlib::HierarchicalNSW<float>(vectorSpace, std::string(location), false, maxElements); // load the index from the specified location
+        return new hnswlib::HierarchicalNSW<float>(vectorSpace, std::string(location), false, maxElements, true); // load the index from the specified location
     } catch (const std::runtime_error e) {
         lastErrorMsg = std::string(e.what());
         return nullptr;
@@ -112,7 +112,8 @@ void freeHNSW(HNSW hnswIndex) {
 }
 
 /**
- * Adds a vector to the HNSW index. If a vector with the specified label already exists, it will be overwritten.
+ * Adds a vector to the HNSW index. 
+ * NOTE: If a vector with the specified label already exists, IT WILL BE OVERWRITTEN.
  *
  * @param hnswIndex:    HNSW index to add the point to
  * @param vector:       the vector to add to the index
